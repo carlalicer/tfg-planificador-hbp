@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from planner import generar_proposta_reprogramacio, generar_programacio_actual, detectar_canvis
 
 from db import (
     init_db,
@@ -163,3 +164,27 @@ def remove_slot(slot_id: int):
         return {"mensaje": "Slot eliminado", "id": slot_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+    # 🔹 PLANNER
+
+@app.get("/planner/actual")
+def planner_actual():
+    cirugias = get_cirugias()
+    slots = get_slots()
+    return generar_programacio_actual(cirugias, slots)
+
+
+@app.get("/planner/proposta")
+def planner_proposta():
+    cirugias = get_cirugias()
+    slots = get_slots()
+
+    actual = generar_programacio_actual(cirugias, slots)
+    proposta = generar_proposta_reprogramacio(cirugias, slots)
+    canvis = detectar_canvis(actual, proposta)
+
+    return {
+        "assignacions": proposta,
+        "canvis": canvis,
+        "requereix_validacio": len(canvis) > 0,
+    }
