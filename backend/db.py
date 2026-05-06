@@ -1,5 +1,4 @@
 import os
-from urllib.parse import urlparse
 
 import psycopg2
 import json
@@ -281,7 +280,7 @@ def list_all_cirugias():
                     dia_curs,
                     fecha_dia_curs
                 FROM cirugias
-                ORDER BY prioridad_puntos DESC, created_at ASC;
+                ORDER BY prioridad_puntos DESC, data_solicitud_operacio ASC;
                 """
             )
             return cur.fetchall()
