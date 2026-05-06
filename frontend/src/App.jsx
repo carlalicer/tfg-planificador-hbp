@@ -664,29 +664,31 @@ function App() {
     return canvis;
   };
 
-  const executarReprogramacio = () => {
-    const actual = planificacioValidada || generarProgramacioActual();
-    const proposta = generarPropostaReprogramacio();
+const executarReprogramacio = () => {
+  fetch(`${API_URL}/planner/proposta`)
+    .then((res) => res.json())
+    .then((data) => {
+      const proposta = data.assignacions || [];
 
-    if (proposta.length === 0) {
-      alert(
-        "No s’ha pogut programar cap cirurgia. Revisa que hi hagi cirurgies pendents i slots quirúrgics compatibles."
-      );
-      return;
-    }
+      if (proposta.length === 0) {
+        alert(
+          "No s’ha pogut programar cap cirurgia. Revisa que hi hagi cirurgies pendents i slots quirúrgics compatibles."
+        );
+        return;
+      }
 
-    const canvis = detectarCanvisReprogramacio(actual, proposta);
+      setPropostaReprogramacio(proposta);
 
-    setPropostaReprogramacio(proposta);
+      if (data.requereix_validacio) {
+        setAvisReprogramacio(data.canvis || []);
+        return;
+      }
 
-    if (canvis.length > 0) {
-      setAvisReprogramacio(canvis);
-      return;
-    }
-
-    setPlanificacioValidada(proposta);
-    alert(`S'han programat ${proposta.length} cirurgies compatibles.`);
-  };
+      setPlanificacioValidada(proposta);
+      alert(`S'han programat ${proposta.length} cirurgies compatibles.`);
+    })
+    .catch(console.error);
+};
 
   const validarReprogramacio = () => {
     setPlanificacioValidada(propostaReprogramacio || []);
@@ -973,7 +975,7 @@ function App() {
       "juliol", "agost", "setembre", "octubre", "novembre", "desembre",
     ];
 
-    const assignacions = planificacioValidada || generarProgramacioActual();
+    const assignacions = planificacioValidada || [];
 
     const any = mesActual.getFullYear();
     const mes = mesActual.getMonth();
