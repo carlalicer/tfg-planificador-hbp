@@ -1,6 +1,18 @@
-node_modules/
-.env
+# Python
 __pycache__/
 *.pyc
-dist/
 .venv/
+venv/
+
+# Node / React
+node_modules/
+dist/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Sistema
+.DS_Store
+Thumbs.db
