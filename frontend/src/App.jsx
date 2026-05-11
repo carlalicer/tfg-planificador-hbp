@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = "https://tfg-planificador-hbp.onrender.com";
 const TOKEN_KEY = "planner_hbp_token";
 const USER_KEY = "planner_hbp_user";
 
