@@ -1,11 +1,23 @@
-from fastapi import FastAPI, HTTPException
+import json
+import os
+
 from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from planner import generar_proposta_reprogramacio, generar_programacio_actual, detectar_canvis
+
+from auth import (
+    create_access_token,
+    get_current_user,
+    hash_password,
+    require_admin,
+    verify_password,
+)
 
 from db import (
     init_db,
     init_slots_table,
+    init_users_table,
+    init_programacions_table,
     ping_db,
     count_cirugias,
     list_all_cirugias,
@@ -16,12 +28,35 @@ from db import (
     add_slot_quirurgico,
     update_slot_quirurgico,
     delete_slot_quirurgico,
+    get_user_by_username,
+    create_user,
+    guardar_programacion_definitiva,
+    get_programacion_definitiva,
+    update_cirujanos_programacion,
+    marcar_cirugias_finalizadas_pendientes_validacion,
+    validar_cirurgia_com_realitzada,
+    retornar_cirurgia_a_pendents,
+    netejar_programacions_no_actives,
 )
-from schemas import CirugiaCreate, CirugiaUpdate, SlotCreate, SlotUpdate
+
+from planner import (
+    generar_proposta_reprogramacio,
+    detectar_canvis,
+    detectar_conflictes_fixades,
+)
+
+from schemas import (
+    CirugiaCreate,
+    CirugiaUpdate,
+    LoginRequest,
+    SlotCreate,
+    SlotUpdate,
+)
 
 load_dotenv()
 
-app = FastAPI(title="Planner Quirúrgico HBP")
+app = FastAPI(title="Planner Quirúrgic HBP")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,20 +66,67 @@ app.add_middleware(
 )
 
 
-# 🔹 INICIALIZACIÓN
+# ------------------------------------------------------------
+# HELPERS
+# ------------------------------------------------------------
+
+def normalizar_jsonb(valor):
+    if valor is None:
+        return []
+
+    if isinstance(valor, list):
+        return valor
+
+    if isinstance(valor, str):
+        try:
+            parsed = json.loads(valor)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+
+    return []
+
+
+def ensure_default_admin():
+    username = os.getenv("DEFAULT_ADMIN_USERNAME", "admin")
+    password = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin1234")
+
+    existing_user = get_user_by_username(username)
+
+    if existing_user:
+        return
+
+    create_user(
+        username=username,
+        hashed_password=hash_password(password),
+        role="admin",
+    )
+
+
+# ------------------------------------------------------------
+# STARTUP
+# ------------------------------------------------------------
+
 @app.on_event("startup")
 def startup():
+
     init_db()
     init_slots_table()
+    init_users_table()
+    init_programacions_table()
+
+    ensure_default_admin()
 
 
-# 🔹 ROOT
+# ------------------------------------------------------------
+# ROOT
+# ------------------------------------------------------------
+
 @app.get("/")
 def root():
-    return {"mensaje": "API funcionando 🚀"}
+    return {"mensaje": "API funcionant 🚀"}
 
 
-# 🔹 HEALTH CHECK
 @app.get("/health")
 def health():
     return {
@@ -54,10 +136,60 @@ def health():
     }
 
 
-# 🔹 CIRUGÍAS
+# ------------------------------------------------------------
+# AUTH
+# ------------------------------------------------------------
+
+@app.post("/auth/login")
+def login(data: LoginRequest):
+
+    user = get_user_by_username(data.username)
+
+    if not user or not verify_password(
+        data.password,
+        user["hashed_password"],
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Usuari o contrasenya incorrectes",
+        )
+
+    token = create_access_token(
+        {
+            "sub": user["username"],
+            "role": user["role"],
+        }
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"],
+        },
+    }
+
+
+@app.get("/auth/me")
+def me(current_user: dict = Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "username": current_user["username"],
+        "role": current_user["role"],
+    }
+
+
+# ------------------------------------------------------------
+# CIRUGIES
+# ------------------------------------------------------------
 
 @app.get("/cirugias")
-def get_cirugias():
+def get_cirugias(current_user: dict = Depends(get_current_user)):
+    
+    marcar_cirugias_finalizadas_pendientes_validacion()
+    
     rows = list_all_cirugias()
 
     return [
@@ -86,40 +218,124 @@ def get_cirugias():
             "realizada_validada": r[21],
             "dia_curs": r[22],
             "fecha_dia_curs": r[23],
+            "slot_id": r[24],
         }
         for r in rows
     ]
 
+
 @app.post("/cirugias")
-def create_cirugia(data: CirugiaCreate):
+def create_cirugia(
+    data: CirugiaCreate,
+    current_user: dict = Depends(get_current_user),
+
+):
     try:
-        new_id = add_cirugia(data.model_dump())
-        return {"mensaje": "Cirugía creada", "id": new_id}
+
+        payload = data.model_dump()
+
+        payload["user_id"] = current_user["username"]
+
+        new_id = add_cirugia(payload)
+
+        return {
+            "mensaje": "Cirurgia creada",
+            "id": new_id,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.put("/cirugias/{cirugia_id}")
-def edit_cirugia(cirugia_id: int, data: CirugiaUpdate):
+@app.put("/cirugias/{cirurgia_id}")
+def edit_cirugia(
+    cirurgia_id: int,
+    data: CirugiaUpdate,
+    current_user: dict = Depends(require_admin),
+):
     try:
-        update_cirugia(cirugia_id, data.model_dump())
-        return {"mensaje": "Cirugía actualizada", "id": cirugia_id}
+
+        actualitzada = update_cirugia(cirurgia_id, data.model_dump())
+
+        if not actualitzada:
+            raise HTTPException(
+                status_code=404,
+                detail="No s'ha trobat cap cirurgia amb aquest id.",
+            )
+
+        return {
+            "mensaje": "Cirurgia actualitzada correctament",
+            "id": cirurgia_id,
+        }
+
+    except HTTPException:
+        raise
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/cirugias/{cirugia_id}")
-def remove_cirugia(cirugia_id: int):
+
+@app.delete("/cirugias/{cirurgia_id}")
+def remove_cirugia(
+    cirurgia_id: int,
+    current_user: dict = Depends(require_admin),
+):
     try:
-        delete_cirugia(cirugia_id)
-        return {"mensaje": "Cirugía eliminada", "id": cirugia_id}
+
+        delete_cirugia(cirurgia_id)
+
+        return {
+            "mensaje": "Cirurgia eliminada",
+            "id": cirurgia_id,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/cirugias/{cirurgia_id}/validar-realitzada")
+def validar_realitzada(
+    cirurgia_id: int,
+    current_user: dict = Depends(get_current_user),
+):
+    ok = validar_cirurgia_com_realitzada(cirurgia_id)
 
-# 🔹 SLOTS QUIRÚRGICOS
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="No s'ha trobat cap cirurgia amb aquest id.",
+        )
+
+    return {
+        "missatge": "Cirurgia validada com a realitzada",
+        "id": cirurgia_id,
+    }
+
+
+@app.post("/cirugias/{cirurgia_id}/retornar-pendents")
+def retornar_a_pendents(
+    cirurgia_id: int,
+    current_user: dict = Depends(get_current_user),
+):
+    ok = retornar_cirurgia_a_pendents(cirurgia_id)
+
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="No s'ha trobat cap cirurgia amb aquest id.",
+        )
+
+    return {
+        "missatge": "Cirurgia retornada a pendents",
+        "id": cirurgia_id,
+    }
+
+# ------------------------------------------------------------
+# SLOTS
+# ------------------------------------------------------------
 
 @app.get("/slots")
-def get_slots():
+def get_slots(current_user: dict = Depends(get_current_user)):
+
     rows = list_slots_quirurgicos()
 
     return [
@@ -130,61 +346,249 @@ def get_slots():
             "franja": r[3],
             "hora_inicio": r[4],
             "hora_fin": r[5],
-            "tipo_cirugia": r[6],
-            "cirujanos_disponibles": r[7],
+            "tipo_cirugia": normalizar_jsonb(r[6]),
+            "cirujanos_disponibles": normalizar_jsonb(r[7]),
             "created_at": r[8],
             "tipus_registre": r[9],
             "comentari": r[10],
+            "slot_de_curs": r[11],
+            "cirurgia_benigna": r[12],
         }
         for r in rows
     ]
 
 
 @app.post("/slots")
-def create_slot(data: SlotCreate):
+def create_slot(
+    data: SlotCreate,
+    current_user: dict = Depends(require_admin),
+):
     try:
+
         new_id = add_slot_quirurgico(data.model_dump())
-        return {"mensaje": "Slot creado", "id": new_id}
+
+        return {
+            "mensaje": "Slot creat",
+            "id": new_id,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.put("/slots/{slot_id}")
-def edit_slot(slot_id: int, data: SlotUpdate):
+def edit_slot(
+    slot_id: int,
+    data: SlotUpdate,
+    current_user: dict = Depends(require_admin),
+):
     try:
+
         update_slot_quirurgico(slot_id, data.model_dump())
-        return {"mensaje": "Slot actualizado", "id": slot_id}
+
+        return {
+            "mensaje": "Slot actualitzat",
+            "id": slot_id,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/slots/{slot_id}")
-def remove_slot(slot_id: int):
+def remove_slot(
+    slot_id: int,
+    current_user: dict = Depends(require_admin),
+):
     try:
+
         delete_slot_quirurgico(slot_id)
-        return {"mensaje": "Slot eliminado", "id": slot_id}
+
+        return {
+            "mensaje": "Slot eliminat",
+            "id": slot_id,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    # 🔹 PLANNER
+
+
+# ------------------------------------------------------------
+# PLANNER ACTUAL DEFINITIU
+# ------------------------------------------------------------
 
 @app.get("/planner/actual")
-def planner_actual():
-    cirugias = get_cirugias()
-    slots = get_slots()
-    return generar_programacio_actual(cirugias, slots)
+def planner_actual(
+    current_user: dict = Depends(get_current_user),
+):
+    netejar_programacions_no_actives()
+    marcar_cirugias_finalizadas_pendientes_validacion()
+    programacio = get_programacion_definitiva()
 
+    cirugias = get_cirugias(current_user)
+    slots = get_slots(current_user)
+
+    resultat = []
+
+    for cirurgia_id, slot_id, fecha, cirujanos_asignados in programacio:
+
+        cirurgia = next(
+            (c for c in cirugias if c["id"] == cirurgia_id),
+            None,
+        )
+
+        slot = next(
+            (s for s in slots if s["id"] == slot_id),
+            None,
+        )
+
+        if cirurgia and slot:
+
+            resultat.append({
+                "cirurgia": cirurgia,
+                "slot": slot,
+                "fixada": bool(cirurgia.get("fijada")),
+                "cirujanos_asignados": normalizar_jsonb(cirujanos_asignados),
+            })
+
+    return resultat
+
+
+# ------------------------------------------------------------
+# ACTUALITZAR CIRURGIANS ASSIGNATS
+# ------------------------------------------------------------
+
+@app.put("/planner/cirujanos/{cirurgia_id}")
+def actualizar_cirujanos_programacion(
+    cirurgia_id: int,
+    payload: dict = Body(...),
+    current_user: dict = Depends(require_admin),
+):
+    try:
+
+        cirujanos = payload.get("cirujanos_asignados", [])
+
+        if not isinstance(cirujanos, list):
+            raise HTTPException(
+                status_code=400,
+                detail="cirujanos_asignados ha de ser una llista.",
+            )
+
+        update_cirujanos_programacion(
+            cirurgia_id=cirurgia_id,
+            cirujanos=cirujanos,
+        )
+
+        return {
+            "mensaje": "Cirurgians assignats actualitzats",
+            "cirurgia_id": cirurgia_id,
+            "cirujanos_asignados": cirujanos,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ------------------------------------------------------------
+# PROPOSTA REPROGRAMACIÓ
+# ------------------------------------------------------------
 
 @app.get("/planner/proposta")
-def planner_proposta():
-    cirugias = get_cirugias()
-    slots = get_slots()
+def planner_proposta(
+    current_user: dict = Depends(require_admin),
+):
+    netejar_programacions_no_actives()
+    cirugias = get_cirugias(current_user)
+    slots = get_slots(current_user)
 
-    actual = generar_programacio_actual(cirugias, slots)
-    proposta = generar_proposta_reprogramacio(cirugias, slots)
-    canvis = detectar_canvis(actual, proposta)
+    actual = planner_actual(current_user)
+
+    cirujanos_actuales_por_cirurgia = {
+        assignacio["cirurgia"]["id"]: assignacio.get("cirujanos_asignados", [])
+        for assignacio in actual
+    }
+
+    conflictes_fixades = detectar_conflictes_fixades(cirugias, slots)
+
+    proposta = generar_proposta_reprogramacio(
+        cirugias,
+        slots,
+    )
+
+    for assignacio in proposta:
+        cirurgia_id = assignacio["cirurgia"]["id"]
+        assignacio["cirujanos_asignados"] = cirujanos_actuales_por_cirurgia.get(
+            cirurgia_id,
+            assignacio.get("cirujanos_asignados", []),
+        )
+
+    canvis = detectar_canvis(
+        actual,
+        proposta,
+    )
 
     return {
-        "assignacions": proposta,
-        "canvis": canvis,
-        "requereix_validacio": len(canvis) > 0,
+    "assignacions": proposta,
+    "canvis": canvis,
+    "conflictes_fixades": conflictes_fixades,
+    "requereix_validacio": len(canvis) > 0 or len(conflictes_fixades) > 0,
+}
+
+
+# ------------------------------------------------------------
+# VALIDAR PLANNER
+# ------------------------------------------------------------
+@app.post("/planner/validar")
+def validar_planner(
+    current_user: dict = Depends(require_admin),
+):
+    netejar_programacions_no_actives()
+    actual = planner_actual(current_user)
+
+    cirujanos_actuales_por_cirurgia = {
+        assignacio["cirurgia"]["id"]: assignacio.get("cirujanos_asignados", [])
+        for assignacio in actual
+    }
+
+    cirugias = get_cirugias(current_user)
+    slots = get_slots(current_user)
+
+    conflictes_fixades = detectar_conflictes_fixades(cirugias, slots)
+
+    if len(conflictes_fixades) > 0:
+      raise HTTPException(
+        status_code=400,
+        detail={
+            "missatge": "No es pot validar la planificació perquè hi ha conflictes amb cirurgies fixades manualment.",
+            "conflictes_fixades": conflictes_fixades,
+        },
+    )
+
+    proposta = generar_proposta_reprogramacio(
+        cirugias,
+        slots,
+    )
+
+    for assignacio in proposta:
+        cirurgia_id = assignacio["cirurgia"]["id"]
+        assignacio["cirujanos_asignados"] = cirujanos_actuales_por_cirurgia.get(
+            cirurgia_id,
+            assignacio.get("cirujanos_asignados", []),
+        )
+
+    if len(proposta) == 0:
+
+        raise HTTPException(
+            status_code=400,
+            detail="No hi ha assignacions compatibles.",
+        )
+
+    guardar_programacion_definitiva(proposta)
+
+    return {
+        "missatge": "Planificació validada correctament",
+        "total_programades": len(proposta),
     }
