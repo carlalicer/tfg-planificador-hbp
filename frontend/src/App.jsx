@@ -170,6 +170,18 @@ useEffect(() => {
   }, [token]);
 
   useEffect(() => {
+  if (!token) return;
+
+  const interval = setInterval(() => {
+    carregarCirurgies();
+    carregarSlots();
+    carregarPlannerActual();
+  }, 30000);
+
+  return () => clearInterval(interval);
+}, [token]);
+
+  useEffect(() => {
     if (!esAdmin && pestanya === "slots") {
       setPestanya("planificacio");
     }
