@@ -1389,7 +1389,7 @@ const cirurgiesOperadesFiltrades = cirugias
       <main style={esMobil ? mainContentMobil : mainContent}>
         <h1 style={esMobil ? titleMobil : title}>Planner quirúrgic HBP</h1>
 
-        {pestanya === "alta" && <div style={esMobil ? cardMobil : card}>{FormulariCirurgia({ dades: form, mode: "alta" })}<button onClick={guardarCirurgia} style={botoPrincipal}>Guardar cirurgia</button></div>}
+        {pestanya === "alta" && <div style={esMobil ? inputMobil : input}>{FormulariCirurgia({ dades: form, mode: "alta" })}<button onClick={guardarCirurgia} style={botoPrincipal}>Guardar cirurgia</button></div>}
 
         {pestanya === "registrades" && (
   <div style={esMobil ? cardMobil : cardAmple}>
@@ -1896,9 +1896,9 @@ marginTop: "64px",
 
 const titleMobil = {
   textAlign: "center",
-  fontSize: "30px",
-  lineHeight: "0.95",
-  margin: "18px 0 18px",
+  fontSize: "26px",
+  lineHeight: "1",
+  margin: "12px 0 12px",
   color: "#0f2b57",
 };
 
@@ -1907,17 +1907,17 @@ const cardMobil = {
   maxWidth: "100%",
   margin: "0 auto",
   background: "white",
-  borderRadius: "18px",
-  padding: "14px",
+  borderRadius: "16px",
+  padding: "12px",
   boxSizing: "border-box",
-  boxShadow: "0 10px 30px rgba(15, 43, 87, 0.08)",
+  boxShadow: "0 8px 22px rgba(15, 43, 87, 0.08)",
   overflowX: "hidden",
 };
 
 const gridUnaColumna = {
   display: "grid",
   gridTemplateColumns: "1fr",
-  gap: "18px",
+  gap: "12px",
 };
 
 const registradesUnaColumna = {
@@ -1972,6 +1972,13 @@ const menuMobil = {
   flexDirection: "column",
   gap: "12px",
   boxShadow: "10px 0 30px rgba(0,0,0,0.35)",
+};
+
+const inputMobil = {
+  ...input,
+  padding: "8px 10px",
+  fontSize: "14px",
+  borderRadius: "9px",
 };
 
 const botoMenuMobil = {
