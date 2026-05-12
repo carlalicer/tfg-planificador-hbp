@@ -17,6 +17,24 @@ def cirurgia_neo_encara_no_programable(cirurgia):
 
     return date.today() < data_minima
 
+def slot_respecta_neoadjuvancia(slot, cirurgia):
+    fecha_fin_neo = cirurgia.get("fecha_fin_neo")
+
+    if not fecha_fin_neo:
+        return True
+
+    if isinstance(fecha_fin_neo, str):
+        fecha_fin_neo = date.fromisoformat(fecha_fin_neo)
+
+    fecha_slot = slot.get("fecha")
+
+    if isinstance(fecha_slot, str):
+        fecha_slot = date.fromisoformat(fecha_slot)
+
+    data_minima = fecha_fin_neo + timedelta(weeks=4)
+
+    return fecha_slot >= data_minima
+
 def normalitza(text):
 
     return (
@@ -210,7 +228,6 @@ def generar_proposta_reprogramacio(
     cirurgies_planificables = ordenar_cirugias([
     c for c in cirugias
     if c.get("estat_cas") in ["Pendent", "Programat"]
-    and not cirurgia_neo_encara_no_programable(c)
 ])
 
 
@@ -247,6 +264,7 @@ def generar_proposta_reprogramacio(
                     slot["id"] not in slots_usats
                     and str(slot.get("fecha")) == str(data_fixada)
                     and es_slot_compatible(slot, cirurgia)
+and slot_respecta_neoadjuvancia(slot, cirurgia)
                 )
             ),
 
@@ -293,6 +311,7 @@ def generar_proposta_reprogramacio(
                 if (
                     slot["id"] not in slots_usats
                     and es_slot_compatible(slot, cirurgia)
+and slot_respecta_neoadjuvancia(slot, cirurgia)
                 )
             ),
 

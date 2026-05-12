@@ -1270,7 +1270,7 @@ const cirurgiesOperadesFiltrades = cirugias
     return (
       <div style={loginPage}>
         <div style={loginCard}>
-          <h1 style={loginTitle}>Planner quirúrgic HBP</h1>
+          <h1 style={loginTitle}>Planner quirúrgic HPB</h1>
           <p style={loginSubtitle}>Accés restringit a personal autoritzat</p>
           <label style={label}>Usuari<input value={loginForm.username} onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })} style={input} placeholder="Introdueix l’usuari" onKeyDown={(e) => e.key === "Enter" && iniciarSessio()} /></label>
           <label style={label}>Contrasenya<input type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} style={input} placeholder="Introdueix la contrasenya" onKeyDown={(e) => e.key === "Enter" && iniciarSessio()} /></label>
@@ -1410,7 +1410,7 @@ const cirurgiesOperadesFiltrades = cirugias
 )}
 
       <main style={esMobil ? mainContentMobil : mainContent}>
-        <h1 style={esMobil ? titleMobil : title}>Planner quirúrgic HBP</h1>
+        <h1 style={esMobil ? titleMobil : title}>Planner quirúrgic HPB</h1>
 
         {pestanya === "alta" && <div style={esMobil ? inputMobil : input}>{FormulariCirurgia({ dades: form, mode: "alta" })}<button onClick={guardarCirurgia} style={botoPrincipal}>Guardar cirurgia</button></div>}
 
