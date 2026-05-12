@@ -1261,30 +1261,130 @@ const cirurgiesOperadesFiltrades = cirugias
 
   return (
     <div style={esMobil ? appLayoutMobil : appLayout}>
-      <aside style={esMobil ? (sidebarOberta ? sidebarMobilOberta : sidebarMobilTancada) : (sidebarOberta ? sidebar : sidebarTancada)}>
-        <div style={sidebarHeader}>
-          {sidebarOberta && <div><div style={sidebarTitle}>Planner HBP</div><div style={sidebarSubtitle}>Planificació quirúrgica</div></div>}
-          <button style={sidebarToggle} onClick={() => setSidebarOberta(!sidebarOberta)} title={sidebarOberta ? "Plegar menú" : "Desplegar menú"}>{sidebarOberta ? "‹" : "›"}</button>
-        </div>
+      {esMobil ? (
+  <>
+    <div style={topbarMobil}>
+      <button
+        style={topbarBtn}
+        onClick={() => setSidebarOberta(!sidebarOberta)}
+      >
+        ☰
+      </button>
 
-        <nav style={sidebarNav}>
-         {[
-  ["alta", "Alta de cirurgia", "＋"],
-  ["registrades", "Cirurgies registrades", "▦"],
-  ["planificacio", "Planner", "▣"],
-  ...(usuari?.role === "admin"
-    ? [["slots", "Calendari de slots", "◷"]]
-    : []),
-].map(([key, label, icon]) => (
-            <button key={key} onClick={() => setPestanya(key)} style={pestanya === key ? sidebarItemActiu : sidebarItem} title={!sidebarOberta ? label : undefined}><span style={sidebarIcon}>{icon}</span>{sidebarOberta && <span>{label}</span>}</button>
-          ))}
-        </nav>
+      <div style={{ fontWeight: 700, fontSize: "18px" }}>
+        Planner HBP
+      </div>
 
-        <div style={sidebarUserBox}>
-          {sidebarOberta ? <><div style={sidebarUserLabel}>Sessió iniciada</div><div style={sidebarUserName}>{usuari?.username}</div><div style={sidebarUserRole}>{usuari?.role}</div></> : <div style={sidebarUserCompact}>{String(usuari?.username || "U").charAt(0).toUpperCase()}</div>}
-          <button style={sidebarLogoutBtn} onClick={tancarSessio}>{sidebarOberta ? "Tancar sessió" : "⏻"}</button>
+      <button style={topbarBtn} onClick={tancarSessio}>
+        ⏻
+      </button>
+    </div>
+
+    {sidebarOberta && (
+      <div style={menuMobil}>
+        {[
+          ["alta", "Alta de cirurgia", "＋"],
+          ["registrades", "Cirurgies registrades", "▦"],
+          ["planificacio", "Planner", "▣"],
+          ...(usuari?.role === "admin"
+            ? [["slots", "Calendari de slots", "◷"]]
+            : []),
+        ].map(([key, label, icon]) => (
+          <button
+            key={key}
+            onClick={() => {
+              setPestanya(key);
+              setSidebarOberta(false);
+            }}
+            style={
+              pestanya === key
+                ? botoMenuMobilActiu
+                : botoMenuMobil
+            }
+          >
+            <span>{icon}</span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+    )}
+  </>
+) : (
+  <aside style={sidebarOberta ? sidebar : sidebarTancada}>
+    <div style={sidebarHeader}>
+      {sidebarOberta && (
+        <div>
+          <div style={sidebarTitle}>Planner HBP</div>
+          <div style={sidebarSubtitle}>
+            Planificació quirúrgica
+          </div>
         </div>
-      </aside>
+      )}
+
+      <button
+        style={sidebarToggle}
+        onClick={() => setSidebarOberta(!sidebarOberta)}
+        title={sidebarOberta ? "Plegar menú" : "Desplegar menú"}
+      >
+        {sidebarOberta ? "‹" : "›"}
+      </button>
+    </div>
+
+    <nav style={sidebarNav}>
+      {[
+        ["alta", "Alta de cirurgia", "＋"],
+        ["registrades", "Cirurgies registrades", "▦"],
+        ["planificacio", "Planner", "▣"],
+        ...(usuari?.role === "admin"
+          ? [["slots", "Calendari de slots", "◷"]]
+          : []),
+      ].map(([key, label, icon]) => (
+        <button
+          key={key}
+          onClick={() => setPestanya(key)}
+          style={
+            pestanya === key
+              ? sidebarItemActiu
+              : sidebarItem
+          }
+          title={!sidebarOberta ? label : undefined}
+        >
+          <span style={sidebarIcon}>{icon}</span>
+          {sidebarOberta && <span>{label}</span>}
+        </button>
+      ))}
+    </nav>
+
+    <div style={sidebarUserBox}>
+      {sidebarOberta ? (
+        <>
+          <div style={sidebarUserLabel}>
+            Sessió iniciada
+          </div>
+          <div style={sidebarUserName}>
+            {usuari?.username}
+          </div>
+          <div style={sidebarUserRole}>
+            {usuari?.role}
+          </div>
+        </>
+      ) : (
+        <div style={sidebarUserCompact}>
+          {String(usuari?.username || "U")
+            .charAt(0)
+            .toUpperCase()}
+        </div>
+      )}
+
+      <button
+        style={sidebarLogoutBtn}
+        onClick={tancarSessio}
+      >
+        {sidebarOberta ? "Tancar sessió" : "⏻"}
+      </button>
+    </div>
+  </aside>
+)}
 
       <main style={esMobil ? mainContentMobil : mainContent}>
         <h1 style={esMobil ? titleMobil : title}>Planner quirúrgic HBP</h1>
@@ -1788,7 +1888,8 @@ const mainContentMobil = {
   flex: 1,
   minWidth: 0,
   padding: "14px 10px 24px",
-  marginLeft: "72px",
+  marginLeft: 0,
+marginTop: "64px",
   boxSizing: "border-box",
   overflowX: "hidden",
 };
@@ -1828,6 +1929,68 @@ const registradesUnaColumna = {
 const taulaScrollMobil = {
   width: "100%",
   overflowX: "auto",
+};
+
+const topbarMobil = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  height: "64px",
+  background: "#0f2b57",
+  color: "white",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "0 14px",
+  zIndex: 3000,
+  boxSizing: "border-box",
+};
+
+const topbarBtn = {
+  background: "rgba(255,255,255,0.12)",
+  border: "1px solid rgba(255,255,255,0.18)",
+  color: "white",
+  borderRadius: "12px",
+  width: "44px",
+  height: "44px",
+  fontSize: "22px",
+};
+
+const menuMobil = {
+  position: "fixed",
+  top: "64px",
+  left: 0,
+  width: "82%",
+  maxWidth: "320px",
+  bottom: 0,
+  background: "#0f2b57",
+  padding: "18px",
+  zIndex: 2999,
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  boxShadow: "10px 0 30px rgba(0,0,0,0.35)",
+};
+
+const botoMenuMobil = {
+  border: "none",
+  borderRadius: "16px",
+  padding: "16px",
+  background: "transparent",
+  color: "white",
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  fontSize: "18px",
+  fontWeight: 600,
+};
+
+const botoMenuMobilActiu = {
+  ...botoMenuMobil,
+  background: "white",
+  color: "#0f2b57",
 };
 
 export default App;
