@@ -1006,7 +1006,7 @@ const cirurgiesOperadesFiltrades = cirugias
           <h2 style={{ margin: 0 }}>{mesos[mes]} del {any}</h2>
           <div />
         </div>
-        <div style={calendarGrid}>
+        <div style={esMobil ? calendarGridPlannerMobil : calendarGrid}>
           {["dl.", "dt.", "dc.", "dj.", "dv.", "ds.", "dg."].map((d) => <div key={d} style={calendarHeader}>{d}</div>)}
           {dies.map((data) => {
             const events = slotsPerDia(data).filter((s) => !esDiaCurs(s));
@@ -1182,12 +1182,23 @@ const cirurgiesOperadesFiltrades = cirugias
               {dies.map((data) => {
                 const assignacionsDia = assignacionsPerDia(data);
                 return (
-                  <div key={formatDataLocal(data)} style={{ ...calendarDayPlanificacio, opacity: data.getMonth() !== mes ? 0.35 : 1 }}>
+                  <div key={formatDataLocal(data)} style={{
+  ...(esMobil ? calendarDayPlanificacioMobilCompacte : calendarDayPlanificacio),
+  opacity: data.getMonth() !== mes ? 0.35 : 1,
+}}>
                     <div style={calendarNumber}><span style={diaTeSlotDeCurs(data) ? calendarNumberCurs : {}}>{data.getDate()}</span></div>
                     {assignacionsDia.map((assignacio) => {
                       const { cirurgia, slot, fixada } = assignacio;
                       return (
-                        <div key={`${slot.id}-${cirurgia.id}`} style={esSlotDeCurs(slot) ? eventOperacioCurs : assignacio.cirurgia.fijada ? eventOperacioFixada : getEstilAssignacioPlanner(assignacio)} onClick={(e) => obrirModalCirurgiaPlanner(e, assignacio)}>
+                        <div key={`${slot.id}-${cirurgia.id}`} style={
+  esMobil
+    ? eventOperacioProgramadaMobil
+    : esSlotDeCurs(slot)
+      ? eventOperacioCurs
+      : assignacio.cirurgia.fijada
+        ? eventOperacioFixada
+        : getEstilAssignacioPlanner(assignacio)
+} onClick={(e) => obrirModalCirurgiaPlanner(e, assignacio)}>
                           <div style={plannerOperacioHeader}><span><strong>Q{getSlotQuirofan(slot)}</strong> · {cirurgia.codigo}</span><span style={plannerDiesEspera}>{calcularDiesEspera(cirurgia)} d</span></div>
                           <div>{cirurgia.tipo_operacion_principal || "Operació"}{fixada && <span> · fixada</span>}</div>
                         </div>
@@ -1998,6 +2009,35 @@ const botoMenuMobilActiu = {
   ...botoMenuMobil,
   background: "white",
   color: "#0f2b57",
+};
+
+const calendarGridPlannerMobil = {
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+  borderTop: "1px solid #dde2ea",
+  borderLeft: "1px solid #dde2ea",
+  width: "100%",
+};
+
+const calendarDayPlanificacioMobilCompacte = {
+  minHeight: "78px",
+  padding: "3px",
+  borderRight: "1px solid #dde2ea",
+  borderBottom: "1px solid #dde2ea",
+  background: "white",
+  overflow: "hidden",
+};
+
+const eventOperacioProgramadaMobil = {
+  background: "#0f766e",
+  color: "white",
+  borderRadius: "6px",
+  padding: "3px",
+  fontSize: "9px",
+  marginBottom: "3px",
+  lineHeight: "1.1",
+  maxHeight: "34px",
+  overflow: "hidden",
 };
 
 export default App;
