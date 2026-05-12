@@ -92,6 +92,14 @@ function App() {
   const plannerRef = useRef(null);
   const esAdmin = usuari?.role === "admin";
 
+  const [esMobil, setEsMobil] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const detectarMobil = () => setEsMobil(window.innerWidth < 768);
+  window.addEventListener("resize", detectarMobil);
+  return () => window.removeEventListener("resize", detectarMobil);
+}, []);
+
   const authHeaders = () => ({ Authorization: `Bearer ${token}` });
 
   const authFetch = (url, options = {}) => {
@@ -1252,8 +1260,8 @@ const cirurgiesOperadesFiltrades = cirugias
   }
 
   return (
-    <div style={appLayout}>
-      <aside style={sidebarOberta ? sidebar : sidebarTancada}>
+    <div style={esMobil ? appLayoutMobil : appLayout}>
+      <aside style={esMobil ? (sidebarOberta ? sidebarMobilOberta : sidebarMobilTancada) : (sidebarOberta ? sidebar : sidebarTancada)}>
         <div style={sidebarHeader}>
           {sidebarOberta && <div><div style={sidebarTitle}>Planner HBP</div><div style={sidebarSubtitle}>Planificació quirúrgica</div></div>}
           <button style={sidebarToggle} onClick={() => setSidebarOberta(!sidebarOberta)} title={sidebarOberta ? "Plegar menú" : "Desplegar menú"}>{sidebarOberta ? "‹" : "›"}</button>
@@ -1278,13 +1286,13 @@ const cirurgiesOperadesFiltrades = cirugias
         </div>
       </aside>
 
-      <main style={mainContent}>
-        <h1 style={title}>Planner quirúrgic HBP</h1>
+      <main style={esMobil ? mainContentMobil : mainContent}>
+        <h1 style={esMobil ? titleMobil : title}>Planner quirúrgic HBP</h1>
 
-        {pestanya === "alta" && <div style={card}>{FormulariCirurgia({ dades: form, mode: "alta" })}<button onClick={guardarCirurgia} style={botoPrincipal}>Guardar cirurgia</button></div>}
+        {pestanya === "alta" && <div style={esMobil ? cardMobil : card}>{FormulariCirurgia({ dades: form, mode: "alta" })}<button onClick={guardarCirurgia} style={botoPrincipal}>Guardar cirurgia</button></div>}
 
         {pestanya === "registrades" && (
-          <div style={cardAmple}>
+  <div style={esMobil ? cardMobil : cardAmple}>
             <div style={subTabsBoxDreta}>
               <button
                 style={subPestanyaRegistrades === "actives" ? subTabActiva : subTab}
@@ -1313,8 +1321,8 @@ const cirurgiesOperadesFiltrades = cirugias
                   />
                 </div>
 
-                <div style={registradesDuesColumnes}>
-                  <section style={registradesPanelTaula}>
+                <div style={esMobil ? registradesUnaColumna : registradesDuesColumnes}>
+                  <section style={esMobil ? { ...registradesPanelTaula, overflowX: "auto" } : registradesPanelTaula}>
                     <div style={registradesPanelHeader}>
                       <span>Cirurgies pendents</span>
                       <span style={{ fontSize: "13px", fontWeight: "500" }}>{cirurgiesPendents.length}</span>
@@ -1354,7 +1362,7 @@ const cirurgiesOperadesFiltrades = cirugias
                     </table>
                   </section>
 
-                  <section style={registradesPanelTaula}>
+                  <section style={esMobil ? { ...registradesPanelTaula, overflowX: "auto" } : registradesPanelTaula}>
                     <div style={registradesPanelHeader}>
                       <span>Cirurgies programades</span>
                       <span style={{ fontSize: "13px", fontWeight: "500" }}>{cirurgiesProgramades.length}</span>
@@ -1479,8 +1487,8 @@ const cirurgiesOperadesFiltrades = cirugias
           </div>
         )}
 
-        {pestanya === "planificacio" && <div style={cardAmple}><CalendariPlanner /></div>}
-        {pestanya === "slots" && <div style={cardAmple}><CalendariSlots /></div>}
+        {pestanya === "planificacio" && <div style={esMobil ? cardMobil : cardAmple}><CalendariPlanner /></div>}
+        {pestanya === "slots" && <div style={esMobil ? cardMobil : cardAmple}><CalendariSlots /></div>}
 
         {cirurgiaEditant && editForm && (
           <div style={modalFons}>
@@ -1554,7 +1562,7 @@ const cirurgiesOperadesFiltrades = cirugias
                   <label style={label}>Número de quiròfan<select value={slotForm.quirofan} onChange={(e) => canviarQuirofan(e.target.value)} style={input}><option>1.7</option><option>1.6</option><option>2.1</option><option>2.2</option><option>Altres</option></select></label>
                   {slotForm.quirofan === "Altres" && <label style={label}>Escriu el número de quiròfan<input value={slotForm.quirofan_altres} onChange={(e) => setSlotForm({ ...slotForm, quirofan_altres: e.target.value })} style={input} /></label>}
                   <label style={label}>Franja<select value={slotForm.franja} onChange={(e) => setSlotForm({ ...slotForm, franja: e.target.value })} style={input}><option>Matí</option><option>Tarda</option></select></label>
-                  <div style={gridDosColumnes}><label style={label}>Hora d’inici<input type="time" value={slotForm.hora_inicio} onChange={(e) => setSlotForm({ ...slotForm, hora_inicio: e.target.value })} style={input} /></label><label style={label}>Hora de fi<input type="time" value={slotForm.hora_fin} onChange={(e) => setSlotForm({ ...slotForm, hora_fin: e.target.value })} style={input} /></label></div>
+                  <div style={esMobil ? gridUnaColumna : gridDosColumnes}><label style={label}>Hora d’inici<input type="time" value={slotForm.hora_inicio} onChange={(e) => setSlotForm({ ...slotForm, hora_inicio: e.target.value })} style={input} /></label><label style={label}>Hora de fi<input type="time" value={slotForm.hora_fin} onChange={(e) => setSlotForm({ ...slotForm, hora_fin: e.target.value })} style={input} /></label></div>
                   <label style={label}>Tipus de cirurgia{ChipsSelector({ opcions: ["Oberta", "Laparoscòpica", "Robòtica"], seleccionades: slotForm.tipus_cirurgia, onToggle: toggleTipusCirurgia })}</label>
                   <label style={checkLabel}><input type="checkbox" checked={slotForm.slot_de_curs} onChange={(e) => setSlotForm({ ...slotForm, slot_de_curs: e.target.checked })} />Slot de curs</label>
                   <label style={checkLabel}><input type="checkbox" checked={slotForm.cirurgia_benigna} onChange={(e) => setSlotForm({ ...slotForm, cirurgia_benigna: e.target.checked })} />Cirurgia benigna</label>
@@ -1741,6 +1749,85 @@ const botoRetornarPetit = {
   fontWeight: "800",
   cursor: "pointer",
   whiteSpace: "nowrap",
+};
+
+const appLayoutMobil = {
+  minHeight: "100vh",
+  background: "#f7f9fc",
+  display: "flex",
+  fontFamily: "Inter, Arial, sans-serif",
+  color: "#1f2a44",
+  overflowX: "hidden",
+};
+
+const sidebarMobilTancada = {
+  width: "72px",
+  minWidth: "72px",
+  minHeight: "100vh",
+  background: "#0f2b57",
+  color: "white",
+  padding: "14px 8px",
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  position: "fixed",
+  top: 0,
+  left: 0,
+  zIndex: 2000,
+};
+
+const sidebarMobilOberta = {
+  ...sidebarMobilTancada,
+  width: "82vw",
+  minWidth: "82vw",
+  maxWidth: "340px",
+  boxShadow: "8px 0 30px rgba(0,0,0,0.35)",
+};
+
+const mainContentMobil = {
+  flex: 1,
+  minWidth: 0,
+  padding: "14px 10px 24px",
+  marginLeft: "72px",
+  boxSizing: "border-box",
+  overflowX: "hidden",
+};
+
+const titleMobil = {
+  textAlign: "center",
+  fontSize: "30px",
+  lineHeight: "0.95",
+  margin: "18px 0 18px",
+  color: "#0f2b57",
+};
+
+const cardMobil = {
+  width: "100%",
+  maxWidth: "100%",
+  margin: "0 auto",
+  background: "white",
+  borderRadius: "18px",
+  padding: "14px",
+  boxSizing: "border-box",
+  boxShadow: "0 10px 30px rgba(15, 43, 87, 0.08)",
+  overflowX: "hidden",
+};
+
+const gridUnaColumna = {
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gap: "18px",
+};
+
+const registradesUnaColumna = {
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gap: "18px",
+};
+
+const taulaScrollMobil = {
+  width: "100%",
+  overflowX: "auto",
 };
 
 export default App;
