@@ -1295,7 +1295,7 @@ const cirurgiesOperadesFiltrades = cirugias
       </button>
 
       <div style={{ fontWeight: 700, fontSize: "18px" }}>
-        Planner HBP
+        Planner HPB
       </div>
 
       <button style={topbarBtn} onClick={tancarSessio}>
@@ -1337,7 +1337,7 @@ const cirurgiesOperadesFiltrades = cirugias
     <div style={sidebarHeader}>
       {sidebarOberta && (
         <div>
-          <div style={sidebarTitle}>Planner HBP</div>
+          <div style={sidebarTitle}>Planner HPB</div>
           <div style={sidebarSubtitle}>
             Planificació quirúrgica
           </div>
