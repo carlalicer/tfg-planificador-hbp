@@ -282,12 +282,6 @@ useEffect(() => {
   }
 }, [token, esAdmin, pestanya]);
 
-useEffect(() => {
-  if (token && esAdmin && pestanya === "gestio_usuaris") {
-    carregarUsuaris();
-  }
-}, [token, esAdmin, pestanya]);
-
   useEffect(() => {
   if (!esAdmin && (pestanya === "slots" || pestanya === "gestio_usuaris")) {
     setPestanya("planificacio");
@@ -1365,8 +1359,12 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
   propostaReprogramacio
     ? getEstilAssignacioPlanner(assignacio)
     : esMobil
-      ? eventOperacioProgramadaMobil
-      : esSlotDeCurs(slot)
+      ? assignacio.cirurgia.dia_curs
+        ? eventOperacioCurs
+        : assignacio.cirurgia.fijada
+          ? eventOperacioFixada
+          : eventOperacioProgramadaMobil
+      : assignacio.cirurgia.dia_curs
         ? eventOperacioCurs
         : assignacio.cirurgia.fijada
           ? eventOperacioFixada
@@ -1408,7 +1406,7 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
                         <div key={slot.id} style={
   propostaReprogramacio
     ? getEstilSetmanalProposta(assignacioSlot)
-    : esSlotDeCurs(slot)
+    : assignacioSlot.cirurgia.dia_curs
       ? setmanaOperacioCurs
       : assignacioSlot.cirurgia.fijada
         ? setmanaOperacioFixada
@@ -1531,10 +1529,7 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
         ["registrades", "Cirurgies registrades", "▦"],
         ["planificacio", "Planner", "▣"],
         ...(usuari?.role === "admin"
-  ? [
-      ["slots", "Calendari de slots", "◷"],
-      ["gestio_usuaris", "Gestió d’usuaris", "👤"],
-    ]
+  ? [["slots", "Calendari de slots", "◷"]]
   : []),
       ].map(([key, label, icon]) => (
         <button
@@ -1554,6 +1549,15 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
     </nav>
 
     <div style={sidebarUserBox}>
+
+      {esAdmin && sidebarOberta && (
+  <button
+    style={pestanya === "gestio_usuaris" ? sidebarAdminBtnActiu : sidebarAdminBtn}
+    onClick={() => setPestanya("gestio_usuaris")}
+  >
+    👤 Gestió d’usuaris
+  </button>
+)} 
       {sidebarOberta ? (
         <>
           <div style={sidebarUserLabel}>
@@ -2467,6 +2471,26 @@ const botoPetitVermell = {
   fontSize: "13px",
   fontWeight: "800",
   cursor: "pointer",
+};
+
+const sidebarAdminBtn = {
+  width: "100%",
+  marginBottom: "14px",
+  border: "1px solid rgba(255,255,255,0.25)",
+  background: "rgba(255,255,255,0.10)",
+  color: "white",
+  borderRadius: "12px",
+  padding: "11px 12px",
+  fontSize: "14px",
+  fontWeight: "800",
+  cursor: "pointer",
+  textAlign: "left",
+};
+
+const sidebarAdminBtnActiu = {
+  ...sidebarAdminBtn,
+  background: "white",
+  color: "#0f2b57",
 };
 
 export default App;
