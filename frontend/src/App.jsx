@@ -160,9 +160,20 @@ useEffect(() => {
   if (!esAdmin) return;
 
   authFetch(`${API_URL}/users`)
-    .then((res) => res.json())
-    .then((data) => setUsuaris(data || []))
-    .catch(console.error);
+    .then(async (res) => {
+      const data = await res.json().catch(() => []);
+      if (!res.ok) {
+        console.error("Error carregant usuaris:", data);
+        setUsuaris([]);
+        return [];
+      }
+      return Array.isArray(data) ? data : [];
+    })
+    .then((data) => setUsuaris(data))
+    .catch((error) => {
+      console.error(error);
+      setUsuaris([]);
+    });
 };
 
 const crearUsuari = () => {
@@ -1844,7 +1855,7 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
             </div>
           )}
 
-          {usuaris.map((user) => (
+          {Array.isArray(usuaris) && usuaris.map((user) => (
             <div key={user.id} style={usuariCard}>
               <div>
                 <strong>{user.username}</strong>
