@@ -263,12 +263,6 @@ const canviarContrasenyaUsuari = (user) => {
   useEffect(() => {
   if (!token) return;
 
-  useEffect(() => {
-  if (token && esAdmin && pestanya === "gestio_usuaris") {
-    carregarUsuaris();
-  }
-}, [token, esAdmin, pestanya]);
-
   const interval = setInterval(() => {
     carregarCirurgies();
     carregarSlots();
@@ -277,6 +271,12 @@ const canviarContrasenyaUsuari = (user) => {
 
   return () => clearInterval(interval);
 }, [token]);
+
+useEffect(() => {
+  if (token && esAdmin && pestanya === "gestio_usuaris") {
+    carregarUsuaris();
+  }
+}, [token, esAdmin, pestanya]);
 
   useEffect(() => {
     if (!esAdmin && pestanya === "slots") {
