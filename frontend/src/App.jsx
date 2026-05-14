@@ -278,10 +278,10 @@ useEffect(() => {
 }, [token, esAdmin, pestanya]);
 
   useEffect(() => {
-    if (!esAdmin && pestanya === "slots") {
-      setPestanya("planificacio");
-    }
-  }, [esAdmin, pestanya]);
+  if (!esAdmin && (pestanya === "slots" || pestanya === "gestio_usuaris")) {
+    setPestanya("planificacio");
+  }
+}, [esAdmin, pestanya]);
 
   const parseArray = (valor) => {
     if (Array.isArray(valor)) return valor;
@@ -1520,8 +1520,11 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
         ["registrades", "Cirurgies registrades", "▦"],
         ["planificacio", "Planner", "▣"],
         ...(usuari?.role === "admin"
-          ? [["slots", "Calendari de slots", "◷"]]
-          : []),
+  ? [
+      ["slots", "Calendari de slots", "◷"],
+      ["gestio_usuaris", "Gestió d’usuaris", "👤"],
+    ]
+  : []),
       ].map(([key, label, icon]) => (
         <button
           key={key}
