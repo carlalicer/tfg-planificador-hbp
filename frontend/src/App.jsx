@@ -83,6 +83,14 @@ function App() {
   const [accioSlot, setAccioSlot] = useState(null);
   const [slotForm, setSlotForm] = useState(slotInicial);
   const [slotEditant, setSlotEditant] = useState(null);
+  const [usuaris, setUsuaris] = useState([]);
+const [userForm, setUserForm] = useState({
+  username: "",
+  password: "",
+  confirmPassword: "",
+  role: "user",
+});
+const [passwordReset, setPasswordReset] = useState({});
 
   const [planificacioValidada, setPlanificacioValidada] = useState([]);
   const [propostaReprogramacio, setPropostaReprogramacio] = useState(null);
@@ -148,6 +156,89 @@ useEffect(() => {
       .catch(console.error);
   };
 
+  const carregarUsuaris = () => {
+  if (!esAdmin) return;
+
+  authFetch(`${API_URL}/users`)
+    .then((res) => res.json())
+    .then((data) => setUsuaris(data || []))
+    .catch(console.error);
+};
+
+const crearUsuari = () => {
+  if (!userForm.username.trim()) return alert("El nom d’usuari és obligatori.");
+  if (userForm.password.length < 6) return alert("La contrasenya ha de tenir almenys 6 caràcters.");
+  if (userForm.password !== userForm.confirmPassword) return alert("Les contrasenyes no coincideixen.");
+
+  authFetch(`${API_URL}/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: userForm.username.trim(),
+      password: userForm.password,
+      role: userForm.role,
+    }),
+  })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "No s’ha pogut crear l’usuari.");
+      return data;
+    })
+    .then(() => {
+      setUserForm({
+        username: "",
+        password: "",
+        confirmPassword: "",
+        role: "user",
+      });
+      carregarUsuaris();
+      alert("Usuari creat correctament.");
+    })
+    .catch((error) => alert(`Error:\n${error.message}`));
+};
+
+const eliminarUsuari = (user) => {
+  if (!window.confirm(`Segur que vols eliminar l’usuari ${user.username}?`)) return;
+
+  authFetch(`${API_URL}/users/${user.id}`, {
+    method: "DELETE",
+  })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "No s’ha pogut eliminar l’usuari.");
+      return data;
+    })
+    .then(() => {
+      carregarUsuaris();
+      alert("Usuari eliminat correctament.");
+    })
+    .catch((error) => alert(`Error:\n${error.message}`));
+};
+
+const canviarContrasenyaUsuari = (user) => {
+  const novaPassword = passwordReset[user.id] || "";
+
+  if (novaPassword.length < 6) {
+    return alert("La nova contrasenya ha de tenir almenys 6 caràcters.");
+  }
+
+  authFetch(`${API_URL}/users/${user.id}/password`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: novaPassword }),
+  })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "No s’ha pogut canviar la contrasenya.");
+      return data;
+    })
+    .then(() => {
+      setPasswordReset({ ...passwordReset, [user.id]: "" });
+      alert("Contrasenya actualitzada correctament.");
+    })
+    .catch((error) => alert(`Error:\n${error.message}`));
+};
+
   const carregarSlots = () => {
     authFetch(`${API_URL}/slots`)
       .then((res) => res.json())
@@ -171,6 +262,12 @@ useEffect(() => {
 
   useEffect(() => {
   if (!token) return;
+
+  useEffect(() => {
+  if (token && esAdmin && pestanya === "gestio_usuaris") {
+    carregarUsuaris();
+  }
+}, [token, esAdmin, pestanya]);
 
   const interval = setInterval(() => {
     carregarCirurgies();
@@ -1372,8 +1469,11 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
           ["registrades", "Cirurgies registrades", "▦"],
           ["planificacio", "Planner", "▣"],
           ...(usuari?.role === "admin"
-            ? [["slots", "Calendari de slots", "◷"]]
-            : []),
+  ? [
+      ["slots", "Calendari de slots", "◷"],
+      ["gestio_usuaris", "Gestió d’usuaris", "👤"],
+    ]
+  : []),
         ].map(([key, label, icon]) => (
           <button
             key={key}
@@ -1674,6 +1774,120 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
 
         {pestanya === "planificacio" && <div style={esMobil ? cardMobil : cardAmple}><CalendariPlanner /></div>}
         {pestanya === "slots" && <div style={esMobil ? cardMobil : cardAmple}><CalendariSlots /></div>}
+
+        {pestanya === "gestio_usuaris" && esAdmin && (
+  <div style={esMobil ? cardMobil : cardAmple}>
+    <h2 style={{ marginTop: 0, color: "#0f2b57" }}>Gestió d’usuaris</h2>
+
+    <div style={gestioUsuarisGrid}>
+      <section style={gestioUsuarisPanel}>
+        <div style={capcalera}>Crear nou usuari</div>
+
+        <label style={label}>
+          Tipus d’usuari
+          <select
+            value={userForm.role}
+            onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+            style={input}
+          >
+            <option value="user">Usuari</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </label>
+
+        <label style={label}>
+          Nom d’usuari
+          <input
+            value={userForm.username}
+            onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+            style={input}
+            placeholder="Nom d’usuari"
+          />
+        </label>
+
+        <label style={label}>
+          Contrasenya
+          <input
+            type="password"
+            value={userForm.password}
+            onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+            style={input}
+            placeholder="Mínim 6 caràcters"
+          />
+        </label>
+
+        <label style={label}>
+          Confirmar contrasenya
+          <input
+            type="password"
+            value={userForm.confirmPassword}
+            onChange={(e) => setUserForm({ ...userForm, confirmPassword: e.target.value })}
+            style={input}
+            placeholder="Repeteix la contrasenya"
+          />
+        </label>
+
+        <button style={botoPrincipal} onClick={crearUsuari}>
+          Crear usuari
+        </button>
+      </section>
+
+      <section style={gestioUsuarisPanel}>
+        <div style={capcalera}>Usuaris registrats</div>
+
+        <div style={llistaUsuaris}>
+          {usuaris.length === 0 && (
+            <div style={registradesBuit}>
+              No hi ha usuaris registrats.
+            </div>
+          )}
+
+          {usuaris.map((user) => (
+            <div key={user.id} style={usuariCard}>
+              <div>
+                <strong>{user.username}</strong>
+                <div style={usuariMeta}>
+                  Rol: {user.role}
+                  {user.id === usuari?.id && " · sessió actual"}
+                </div>
+              </div>
+
+              <div style={usuariActions}>
+                <input
+                  type="password"
+                  value={passwordReset[user.id] || ""}
+                  onChange={(e) =>
+                    setPasswordReset({
+                      ...passwordReset,
+                      [user.id]: e.target.value,
+                    })
+                  }
+                  style={inputPetit}
+                  placeholder="Nova contrasenya"
+                />
+
+                <button
+                  style={botoPetitBlau}
+                  onClick={() => canviarContrasenyaUsuari(user)}
+                >
+                  Canviar
+                </button>
+
+                <button
+                  style={botoPetitVermell}
+                  disabled={user.id === usuari?.id}
+                  onClick={() => eliminarUsuari(user)}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  </div>
+)}
 
         {cirurgiaEditant && editForm && (
           <div style={modalFons}>
@@ -2163,6 +2377,83 @@ const panellCanviText = {
   color: "#475569",
   fontWeight: "600",
   lineHeight: "1.35",
+};
+
+const gestioUsuarisGrid = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1.4fr",
+  gap: "18px",
+};
+
+const gestioUsuarisPanel = {
+  background: "#f8fafc",
+  border: "1px solid #d5dce8",
+  borderRadius: "18px",
+  padding: "14px",
+};
+
+const llistaUsuaris = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "10px",
+};
+
+const usuariCard = {
+  background: "white",
+  border: "1px solid #e2e8f0",
+  borderRadius: "14px",
+  padding: "12px",
+  display: "grid",
+  gridTemplateColumns: "1fr auto",
+  gap: "12px",
+  alignItems: "center",
+};
+
+const usuariMeta = {
+  marginTop: "4px",
+  color: "#64748b",
+  fontSize: "13px",
+  fontWeight: "700",
+};
+
+const usuariActions = {
+  display: "flex",
+  gap: "8px",
+  alignItems: "center",
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+};
+
+const inputPetit = {
+  width: "170px",
+  boxSizing: "border-box",
+  padding: "8px 10px",
+  borderRadius: "9px",
+  border: "1px solid #d6dbe3",
+  background: "#f1f3f7",
+  fontSize: "13px",
+};
+
+const botoPetitBlau = {
+  border: "none",
+  background: "#0f2b57",
+  color: "white",
+  borderRadius: "9px",
+  padding: "8px 10px",
+  fontSize: "13px",
+  fontWeight: "800",
+  cursor: "pointer",
+};
+
+const botoPetitVermell = {
+  border: "none",
+  background: "#ef4444",
+  color: "white",
+  borderRadius: "9px",
+  padding: "8px 10px",
+  fontSize: "13px",
+  fontWeight: "800",
+  cursor: "pointer",
 };
 
 export default App;
