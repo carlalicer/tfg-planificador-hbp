@@ -1203,10 +1203,14 @@ const cirurgiesOperadesFiltrades = cirugias
 
         {canvi.tipus === "moguda" && (
           <div style={panellCanviText}>
-            estava programada per al{" "}
-            <strong>{formatDataVista(getSlotData(canvi.slot_actual))}</strong>{" "}
-            i es mou al{" "}
-            <strong>{formatDataVista(getSlotData(canvi.slot_nou))}</strong>.
+           estava programada per al{" "}
+<strong>{formatDataVista(getSlotData(canvi.slot_actual))}</strong>{" "}
+a <strong>Q{getSlotQuirofan(canvi.slot_actual)}</strong>{" "}
+({getSlotFranja(canvi.slot_actual) || "franja no informada"}){" "}
+i es mou al{" "}
+<strong>{formatDataVista(getSlotData(canvi.slot_nou))}</strong>{" "}
+a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
+({getSlotFranja(canvi.slot_nou) || "franja no informada"}).
           </div>
         )}
 
