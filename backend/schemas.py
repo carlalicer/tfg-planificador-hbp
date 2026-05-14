@@ -132,3 +132,16 @@ class SlotUpdate(SlotBase):
 
 class CirujanosAsignadosUpdate(BaseModel):
     cirujanos_asignados: List[str] = []
+
+# ------------------------------------------------------------
+# USERS ADMIN
+# ------------------------------------------------------------
+
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+
+class UserPasswordUpdateRequest(BaseModel):
+    password: str

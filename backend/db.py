@@ -668,7 +668,74 @@ def create_user(username: str, hashed_password: str, role: str = "admin"):
     finally:
         conn.close()
 
+def list_users():
+    conn = get_conn()
 
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, username, role, created_at
+                FROM users
+                ORDER BY created_at ASC;
+            """)
+
+            rows = cur.fetchall()
+
+        return [
+            {
+                "id": row[0],
+                "username": row[1],
+                "role": row[2],
+                "created_at": row[3],
+            }
+            for row in rows
+        ]
+
+    finally:
+        conn.close()
+
+
+def delete_user(user_id: int):
+    conn = get_conn()
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM users
+                WHERE id = %s
+                RETURNING id;
+            """, (user_id,))
+
+            row = cur.fetchone()
+
+        conn.commit()
+
+        return row is not None
+
+    finally:
+        conn.close()
+
+
+def update_user_password(user_id: int, hashed_password: str):
+    conn = get_conn()
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users
+                SET hashed_password = %s
+                WHERE id = %s
+                RETURNING id;
+            """, (hashed_password, user_id))
+
+            row = cur.fetchone()
+
+        conn.commit()
+
+        return row is not None
+
+    finally:
+        conn.close()
 # ------------------------------------------------------------
 # PLANNER DEFINITIU
 # ------------------------------------------------------------

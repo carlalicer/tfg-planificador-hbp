@@ -37,6 +37,9 @@ from db import (
     validar_cirurgia_com_realitzada,
     retornar_cirurgia_a_pendents,
     netejar_programacions_no_actives,
+    list_users,
+    delete_user,
+    update_user_password,
 )
 
 from planner import (
@@ -51,6 +54,8 @@ from schemas import (
     LoginRequest,
     SlotCreate,
     SlotUpdate,
+    UserCreateRequest,
+    UserPasswordUpdateRequest,
 )
 
 load_dotenv()
@@ -180,7 +185,120 @@ def me(current_user: dict = Depends(get_current_user)):
         "role": current_user["role"],
     }
 
+# ------------------------------------------------------------
+# ADMIN USERS
+# ------------------------------------------------------------
 
+@app.get("/users")
+def get_users_admin(
+    current_user: dict = Depends(require_admin),
+):
+    return list_users()
+
+
+@app.post("/users")
+def create_user_admin(
+    data: UserCreateRequest,
+    current_user: dict = Depends(require_admin),
+):
+    username = data.username.strip()
+    password = data.password.strip()
+    role = data.role.strip()
+
+    if not username:
+        raise HTTPException(
+            status_code=400,
+            detail="El nom d'usuari és obligatori.",
+        )
+
+    if len(password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="La contrasenya ha de tenir almenys 6 caràcters.",
+        )
+
+    if role not in ["admin", "user"]:
+        raise HTTPException(
+            status_code=400,
+            detail="El rol ha de ser admin o user.",
+        )
+
+    existing_user = get_user_by_username(username)
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Ja existeix un usuari amb aquest nom.",
+        )
+
+    new_id = create_user(
+        username=username,
+        hashed_password=hash_password(password),
+        role=role,
+    )
+
+    return {
+        "missatge": "Usuari creat correctament",
+        "id": new_id,
+        "username": username,
+        "role": role,
+    }
+
+
+@app.delete("/users/{user_id}")
+def delete_user_admin(
+    user_id: int,
+    current_user: dict = Depends(require_admin),
+):
+    if user_id == current_user["id"]:
+        raise HTTPException(
+            status_code=400,
+            detail="No pots eliminar el teu propi usuari.",
+        )
+
+    ok = delete_user(user_id)
+
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="No s'ha trobat cap usuari amb aquest id.",
+        )
+
+    return {
+        "missatge": "Usuari eliminat correctament",
+        "id": user_id,
+    }
+
+
+@app.put("/users/{user_id}/password")
+def update_password_admin(
+    user_id: int,
+    data: UserPasswordUpdateRequest,
+    current_user: dict = Depends(require_admin),
+):
+    password = data.password.strip()
+
+    if len(password) < 6:
+        raise HTTPException(
+            status_code=400,
+            detail="La nova contrasenya ha de tenir almenys 6 caràcters.",
+        )
+
+    ok = update_user_password(
+        user_id=user_id,
+        hashed_password=hash_password(password),
+    )
+
+    if not ok:
+        raise HTTPException(
+            status_code=404,
+            detail="No s'ha trobat cap usuari amb aquest id.",
+        )
+
+    return {
+        "missatge": "Contrasenya actualitzada correctament",
+        "id": user_id,
+    }
 # ------------------------------------------------------------
 # CIRUGIES
 # ------------------------------------------------------------
