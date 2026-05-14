@@ -1057,7 +1057,22 @@ const cirurgiesOperadesFiltrades = cirugias
     return eventOperacioProgramada;
   };
 
+  const getEstilSetmanalProposta = (assignacio) => {
+  const tipus = getTipusCanviAssignacio(assignacio);
+
+  if (tipus === "igual") return setmanaOperacioSenseCanvis;
+  if (tipus === "nova") return setmanaOperacioNova;
+  if (tipus === "moguda") return setmanaOperacioMoguda;
+
+  return setmanaOperacioBlauVerd;
+};
+
   const cirurgiesPendentsPerReprogramacio = () => (avisReprogramacio || []).filter((canvi) => canvi.tipus === "pendent");
+
+  const canvisImportantsReprogramacio = () =>
+  (avisReprogramacio || []).filter((canvi) =>
+    ["moguda", "pendent"].includes(canvi.tipus)
+  );
 
   const descarregarPlannerPDF = async () => {
     if (!plannerRef.current) return;
@@ -1158,7 +1173,7 @@ const cirurgiesOperadesFiltrades = cirugias
     });
     const assignacionsPerDia = (data) => assignacions.filter((a) => getSlotData(a.slot) === formatDataLocal(data));
     const pendents = cirurgiesPendentsPerReprogramacio();
-
+    const canvisImportants = canvisImportantsReprogramacio();
     return (
       <>
         <div style={plannerToolbar}>
@@ -1174,6 +1189,38 @@ const cirurgiesOperadesFiltrades = cirugias
             </ul>
           </div>
         )}
+
+
+        {propostaReprogramacio && canvisImportants.length > 0 && (
+  <div style={panellCanvisReprogramacio}>
+    <div style={panellCanvisTitol}>
+      Canvis de la reprogramació
+    </div>
+
+    {canvisImportants.map((canvi) => (
+      <div key={`${canvi.tipus}-${canvi.cirurgia.id}`} style={panellCanviItem}>
+        <strong>{canvi.cirurgia.codigo}</strong>
+
+        {canvi.tipus === "moguda" && (
+          <div style={panellCanviText}>
+            estava programada per al{" "}
+            <strong>{formatDataVista(getSlotData(canvi.slot_actual))}</strong>{" "}
+            i es mou al{" "}
+            <strong>{formatDataVista(getSlotData(canvi.slot_nou))}</strong>.
+          </div>
+        )}
+
+        {canvi.tipus === "pendent" && (
+          <div style={panellCanviText}>
+            estava programada per al{" "}
+            <strong>{formatDataVista(getSlotData(canvi.slot_actual))}</strong>{" "}
+            i torna a <strong>cirurgies pendents</strong>.
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+)}
 
         <div ref={plannerRef}>
           <div style={plannerTop}>
@@ -1203,13 +1250,15 @@ const cirurgiesOperadesFiltrades = cirugias
                       const { cirurgia, slot, fixada } = assignacio;
                       return (
                         <div key={`${slot.id}-${cirurgia.id}`} style={
-  esMobil
-    ? eventOperacioProgramadaMobil
-    : esSlotDeCurs(slot)
-      ? eventOperacioCurs
-      : assignacio.cirurgia.fijada
-        ? eventOperacioFixada
-        : getEstilAssignacioPlanner(assignacio)
+  propostaReprogramacio
+    ? getEstilAssignacioPlanner(assignacio)
+    : esMobil
+      ? eventOperacioProgramadaMobil
+      : esSlotDeCurs(slot)
+        ? eventOperacioCurs
+        : assignacio.cirurgia.fijada
+          ? eventOperacioFixada
+          : eventOperacioProgramada
 } onClick={(e) => obrirModalCirurgiaPlanner(e, assignacio)}>
                           <div style={plannerOperacioHeader}><span><strong>Q{getSlotQuirofan(slot)}</strong> · {cirurgia.codigo}</span><span style={plannerDiesEspera}>{calcularDiesEspera(cirurgia)} d</span></div>
                           <div>{cirurgia.tipo_operacion_principal || "Operació"}{fixada && <span> · fixada</span>}</div>
@@ -1244,7 +1293,15 @@ const cirurgiesOperadesFiltrades = cirugias
                       const assignacioSlot = assignacionsDia.find((a) => a.slot.id === slot.id);
                       if (!assignacioSlot) return null;
                       return (
-                        <div key={slot.id} style={esSlotDeCurs(slot) ? setmanaOperacioCurs : assignacioSlot.cirurgia.fijada ? setmanaOperacioFixada : setmanaOperacioBlauVerd} onClick={(e) => obrirModalCirurgiaPlanner(e, assignacioSlot)}>
+                        <div key={slot.id} style={
+  propostaReprogramacio
+    ? getEstilSetmanalProposta(assignacioSlot)
+    : esSlotDeCurs(slot)
+      ? setmanaOperacioCurs
+      : assignacioSlot.cirurgia.fijada
+        ? setmanaOperacioFixada
+        : setmanaOperacioBlauVerd
+}onClick={(e) => obrirModalCirurgiaPlanner(e, assignacioSlot)}>
                           <div style={setmanaOperacioHeader}><strong>Q{getSlotQuirofan(slot) || "?"}</strong><span>{getSlotFranja(slot) || "Franja"}</span></div>
                           <div style={plannerOperacioHeader}><span></span><span style={plannerDiesEsperaClar}>{calcularDiesEspera(assignacioSlot.cirurgia)} d espera</span></div>
                           <div style={setmanaOperacioText}><strong>{assignacioSlot.cirurgia.codigo}</strong></div>
@@ -1818,6 +1875,23 @@ const setmanaOperacioFixada = { ...setmanaOperacioBlauVerd, background: "#d97706
 const setmanaOperacioHeader = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontSize: "13px", fontWeight: "900" };
 const setmanaOperacioText = { marginTop: "4px", fontWeight: "700" };
 const setmanaOperacioDoctors = { marginTop: "8px", paddingTop: "7px", borderTop: "1px solid rgba(255,255,255,0.35)", fontSize: "11px", fontWeight: "700", lineHeight: "1.35" };
+const setmanaOperacioSenseCanvis = {
+  ...setmanaOperacioBlauVerd,
+  background: "#6b7280",
+  boxShadow: "0 6px 14px rgba(107, 114, 128, 0.18)",
+};
+
+const setmanaOperacioNova = {
+  ...setmanaOperacioBlauVerd,
+  background: "#16a34a",
+  boxShadow: "0 6px 14px rgba(22, 163, 74, 0.18)",
+};
+
+const setmanaOperacioMoguda = {
+  ...setmanaOperacioBlauVerd,
+  background: "#7f1d1d",
+  boxShadow: "0 6px 14px rgba(127, 29, 29, 0.22)",
+};
 const plannerOperacioHeader = { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" };
 const plannerDiesEspera = { marginLeft: "auto", fontSize: "10px", fontWeight: "900", background: "rgba(255,255,255,0.18)", padding: "2px 5px", borderRadius: "999px", whiteSpace: "nowrap" };
 const plannerDiesEsperaClar = { marginLeft: "auto", fontSize: "11px", fontWeight: "900", background: "rgba(255,255,255,0.22)", padding: "3px 7px", borderRadius: "999px", whiteSpace: "nowrap" };
@@ -2050,6 +2124,40 @@ const eventOperacioProgramadaMobil = {
   lineHeight: "1.1",
   maxHeight: "34px",
   overflow: "hidden",
+};
+
+const panellCanvisReprogramacio = {
+  background: "#f8fafc",
+  border: "1px solid #cbd5e1",
+  borderLeft: "5px solid #7f1d1d",
+  borderRadius: "14px",
+  padding: "14px",
+  margin: "12px 0",
+  boxShadow: "0 8px 22px rgba(15, 43, 87, 0.08)",
+};
+
+const panellCanvisTitol = {
+  color: "#0f2b57",
+  fontSize: "16px",
+  fontWeight: "900",
+  marginBottom: "10px",
+};
+
+const panellCanviItem = {
+  background: "white",
+  border: "1px solid #e2e8f0",
+  borderRadius: "12px",
+  padding: "10px",
+  marginBottom: "8px",
+  fontSize: "14px",
+  color: "#1f2a44",
+};
+
+const panellCanviText = {
+  marginTop: "4px",
+  color: "#475569",
+  fontWeight: "600",
+  lineHeight: "1.35",
 };
 
 export default App;
