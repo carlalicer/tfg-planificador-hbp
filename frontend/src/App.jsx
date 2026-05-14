@@ -1214,13 +1214,14 @@ a <strong>Q{getSlotQuirofan(canvi.slot_nou)}</strong>{" "}
           </div>
         )}
 
-        {canvi.tipus === "pendent" && (
-          <div style={panellCanviText}>
-            estava programada per al{" "}
-            <strong>{formatDataVista(getSlotData(canvi.slot_actual))}</strong>{" "}
-            i torna a <strong>cirurgies pendents</strong>.
-          </div>
-        )}
+       {canvi.tipus === "pendent" && (
+  <div style={panellCanviText}>
+    estava programada per al{" "}
+    <strong>{formatDataVista(getSlotData(canvi.slot_actual))}</strong>{" "}
+    a <strong>Q{getSlotQuirofan(canvi.slot_actual)}</strong>{" "}
+    ({getSlotFranja(canvi.slot_actual) || "franja no informada"}){" "}
+    i torna a <strong>cirurgies pendents</strong>.
+  </div> )}
       </div>
     ))}
   </div>
